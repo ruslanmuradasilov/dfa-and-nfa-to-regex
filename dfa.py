@@ -1,5 +1,3 @@
-# import os
-# os.environ["Path"] += os.pathsep + 'C:/Program Files (x86)/graphviz-2.38/release/bin/dot.exe'
 from graphviz import Digraph
 import numpy as np
 import re
@@ -15,7 +13,6 @@ class DFA:
         self.next_states_by_1 = next_states_by_1
         self.transition_matrix = np.empty((nstates, nstates), dtype=object)
         self.set_transition_matrix()
-        pass
 
     def set_transition_matrix(self):
         for i in range(self.transition_matrix.shape[0]):
@@ -59,14 +56,14 @@ class DFA:
     def get_intermediate_states(self):
         return [state for state in self.states if state != self.init_state and state not in self.final_states]
 
-    def get_predecessors(self, state):
+    def get_previous_states(self, state):
         states = []
         for pred in self.states:
             if self.transition_matrix[pred][state] != '' and pred != state:
                 states.append(pred)
         return states
 
-    def get_successors(self, state):
+    def get_next_states(self, state):
         states = []
         for foll in self.states:
             if self.transition_matrix[state][foll] != '' and foll != state:
@@ -86,8 +83,10 @@ class DFA:
         return expr
 
     def set_braces(self, expr):
-        new_expr = re.sub(r'\([0-1+]*\)', '', expr)
-        if '+' in new_expr:
+        new_expr = expr
+        while ('(' in new_expr):
+            new_expr = re.sub(r'\([0-1+*]*\)', '', new_expr)
+        if '+' in new_expr and new_expr != '':
             expr = '(' + expr + ')'
         return expr
 
@@ -106,8 +105,8 @@ class DFA:
         trans_func = self.transition_matrix.copy()
 
         for inter in inter_states:
-            previous_states = self.get_predecessors(inter)
-            following_states = self.get_successors(inter)
+            previous_states = self.get_previous_states(inter)
+            following_states = self.get_next_states(inter)
 
             for prev in previous_states:
                 for foll in following_states:
@@ -139,26 +138,28 @@ class DFA:
 
 
 def main():
-    # nstates = input('Enter the number of states in your DFA: ')
-    # nstates = int(nstates)
-    # final_states = list(map(int, input('Enter the final states: ').split()))
-    # next_states_by_0 = list(map(int, input('Enter the next states by 0: ').split()))
-    # next_states_by_1 = list(map(int, input('Enter the next states by 1: ').split()))
+    nstates = input('Enter the number of states in your DFA: ')
+    nstates = int(nstates)
+    final_states = list(map(int, input('Enter the final states: ').split()))
+    next_states_by_0 = list(map(int, input('Enter the next states by 0: ').split()))
+    next_states_by_1 = list(map(int, input('Enter the next states by 1: ').split()))
 
-    nstates = 1
-    final_states = [0]
-    next_states_by_0 = [0]
-    next_states_by_1 = [0]
+    # nstates = 3
+    # final_states = [2]
+    # next_states_by_0 = [1, 1, 0]
+    # next_states_by_1 = [2, 2, 2]
 
     regex = ''
     for f in final_states:
         dfa = DFA(nstates, [f], next_states_by_0, next_states_by_1)
-        regex += '+' + dfa.to_regex()
+        reg = dfa.to_regex()
+        if reg != '':
+            regex += '+' + reg
 
     dfa = DFA(nstates, final_states, next_states_by_0, next_states_by_1)
     dfa.draw_graph(regex[1:], 'DFA')
 
-    print(regex[1:])
+    #print(regex[1:])
 
 
 if __name__ == '__main__':
