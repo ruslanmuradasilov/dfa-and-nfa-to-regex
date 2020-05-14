@@ -58,24 +58,17 @@ class DFA:
 
     def get_previous_states(self, state):
         states = []
-        for pred in self.states:
-            if self.transition_matrix[pred][state] != '' and pred != state:
-                states.append(pred)
+        for prev in self.states:
+            if self.transition_matrix[prev][state] != '' and prev != state:
+                states.append(prev)
         return states
 
     def get_next_states(self, state):
         states = []
-        for foll in self.states:
-            if self.transition_matrix[state][foll] != '' and foll != state:
-                states.append(foll)
+        for next in self.states:
+            if self.transition_matrix[state][next] != '' and next != state:
+                states.append(next)
         return states
-
-    def iterate(self, expr):
-        if len(expr) > 1:
-            expr = '(' + expr + ')' + '*'
-        elif len(expr) == 1:
-            expr = expr + '*'
-        return expr
 
     def get_loop(self, state):
         expr = self.transition_matrix[state][state]
@@ -100,9 +93,16 @@ class DFA:
         exprs = [expr for expr in exprs if expr != '']
         return '+'.join(exprs)
 
+    def iterate(self, expr):
+        if len(expr) > 1:
+            expr = '(' + expr + ')' + '*'
+        elif len(expr) == 1:
+            expr = expr + '*'
+        return expr
+
     def to_regex(self):
         inter_states = self.get_intermediate_states()
-        trans_func = self.transition_matrix.copy()
+        trans_func = self.transition_matrix
 
         for inter in inter_states:
             previous_states = self.get_previous_states(inter)
@@ -131,23 +131,21 @@ class DFA:
         else:
             return ''
         if len(final_to_init) > 0:
-            regex = self.union([regex, self.concat(
-                [self.iterate(self.concat([init_loop, init_to_final, final_loop, final_to_init])), init_to_final,
-                 final_loop])])
+            regex = self.union([regex, self.concat([self.iterate(self.concat([init_loop, init_to_final, final_loop, final_to_init])), init_to_final, final_loop ])])
         return regex
 
 
 def main():
-    nstates = input('Enter the number of states in your DFA: ')
-    nstates = int(nstates)
-    final_states = list(map(int, input('Enter the final states: ').split()))
-    next_states_by_0 = list(map(int, input('Enter the next states by 0: ').split()))
-    next_states_by_1 = list(map(int, input('Enter the next states by 1: ').split()))
+    # nstates = input('Enter the number of states in your DFA: ')
+    # nstates = int(nstates)
+    # final_states = list(map(int, input('Enter the final states: ').split()))
+    # next_states_by_0 = list(map(int, input('Enter the next states by 0: ').split()))
+    # next_states_by_1 = list(map(int, input('Enter the next states by 1: ').split()))
 
-    # nstates = 3
-    # final_states = [2]
-    # next_states_by_0 = [1, 1, 0]
-    # next_states_by_1 = [2, 2, 2]
+    nstates = 3
+    final_states = [1]
+    next_states_by_0 = [0, 2, 1]
+    next_states_by_1 = [1, 1, 0]
 
     regex = ''
     for f in final_states:
