@@ -5,29 +5,12 @@ import re
 # https://graphviz.readthedocs.io/en/stable/index.html# - draw_graph
 
 class DFA:
-    def __init__(self, nstates, final_states, next_states_by_0, next_states_by_1):
+    def __init__(self, nstates, final_states, transition_matrix):
         self.nstates = nstates
         self.states = [i for i in range(nstates)]
         self.init_state = 0
         self.final_states = final_states
-        self.next_states_by_0 = next_states_by_0
-        self.next_states_by_1 = next_states_by_1
-        self.transition_matrix = np.empty((nstates, nstates), dtype=object)
-        self.set_transition_matrix()
-
-    def set_transition_matrix(self):
-        for i in range(self.transition_matrix.shape[0]):
-            for j in range(self.transition_matrix.shape[1]):
-                self.transition_matrix[i][j] = ''
-
-        for i in range(self.transition_matrix.shape[0]):
-            self.transition_matrix[i][self.next_states_by_0[i]] = '0'
-
-        for i in range(self.transition_matrix.shape[0]):
-            if self.transition_matrix[i][self.next_states_by_1[i]] == '0':
-                self.transition_matrix[i][self.next_states_by_1[i]] = '0+1'
-            else:
-                self.transition_matrix[i][self.next_states_by_1[i]] = '1'
+        self.transition_matrix = transition_matrix
 
     def draw_graph(self, label, name):
         gr = Digraph(format='png')
@@ -57,29 +40,29 @@ class DFA:
     def get_intermediate_states(self):
         return [state for state in self.states if state != self.init_state and state not in self.final_states]
 
-    def get_previous_states(self, state):
+    def get_previous_states(self, state, trans_func):
         states = []
         for prev in self.states:
-            if self.transition_matrix[prev][state] != '' and prev != state:
+            if trans_func[prev][state] != '' and prev != state:
                 states.append(prev)
         return states
 
-    def get_next_states(self, state):
+    def get_next_states(self, state, trans_func):
         states = []
         for next in self.states:
-            if self.transition_matrix[state][next] != '' and next != state:
+            if trans_func[state][next] != '' and next != state:
                 states.append(next)
         return states
 
-    def get_loop(self, state):
-        expr = self.transition_matrix[state][state]
+    def get_loop(self, state, trans_func):
+        expr = trans_func[state][state]
         expr = self.iterate(expr)
         return expr
 
     def set_braces(self, expr):
         new_expr = expr
         while ('(' in new_expr):
-            new_expr = re.sub(r'\([0-1+*]*\)', '', new_expr)
+            new_expr = re.sub(r'\([0-1+$*]*\)', '', new_expr)
         if '+' in new_expr and new_expr != '':
             expr = '(' + expr + ')'
         return expr
@@ -103,15 +86,15 @@ class DFA:
 
     def to_regex(self):
         inter_states = self.get_intermediate_states()
-        trans_func = self.transition_matrix
+        trans_func = self.transition_matrix.copy()
 
         for inter in inter_states:
-            previous_states = self.get_previous_states(inter)
-            following_states = self.get_next_states(inter)
+            previous_states = self.get_previous_states(inter, trans_func)
+            following_states = self.get_next_states(inter, trans_func)
 
             for prev in previous_states:
                 for foll in following_states:
-                    inter_loop = self.get_loop(inter)
+                    inter_loop = self.get_loop(inter, trans_func)
                     inter_to_foll = self.concat([inter_loop, trans_func[inter][foll]])
                     prev_to_foll = self.concat([trans_func[prev][inter], inter_to_foll])
                     trans_func[prev][foll] = self.union([trans_func[prev][foll], prev_to_foll])
@@ -120,12 +103,12 @@ class DFA:
             for foll in following_states:
                 trans_func[inter][foll] = ''
 
-        init_loop = self.get_loop(self.init_state)
+        init_loop = self.get_loop(self.init_state, trans_func)
         init_to_final = trans_func[self.init_state][self.final_states[0]]
-        final_loop = self.get_loop(self.final_states[0])
+        final_loop = self.get_loop(self.final_states[0], trans_func)
         final_to_init = trans_func[self.final_states[0]][self.init_state]
         if self.final_states[0] == self.init_state:
-            return init_loop
+            return init_loop + '$'
         regex = ''
         if len(init_to_final) > 0:
             regex = self.concat([init_loop, init_to_final, final_loop])
@@ -137,33 +120,32 @@ class DFA:
 
 
 def main():
-    # nstates = input('Enter the number of states in your DFA: ')
-    # nstates = int(nstates)
-    # final_states = list(map(int, input('Enter the final states: ').split()))
-    # next_states_by_0 = list(map(int, input('Enter the next states by 0: ').split()))
-    # next_states_by_1 = list(map(int, input('Enter the next states by 1: ').split()))
+    fin = open("in")
+    nstates = int(fin.readline())
+    final_states = list(map(int, fin.readline().split()))
 
-    # nstates = 3
-    # final_states = [1]
-    # next_states_by_0 = [0, 2, 1]
-    # next_states_by_1 = [1, 1, 0]
+    transition_matrix = np.empty((nstates, nstates), dtype=object)
+    for i in range(transition_matrix.shape[0]):
+        for j in range(transition_matrix.shape[1]):
+            transition_matrix[i][j] = ''
 
-    nstates = 3
-    final_states = [0, 2]
-    next_states_by_0 = [1, 0, 1]
-    next_states_by_1 = [2, 1, 1]
+    for line in fin:
+        line = line.split()
+        transition_matrix[int(line[0])][int(line[1])] = line[2]
+    fin.close()
 
     regex = ''
     for f in final_states:
-        dfa = DFA(nstates, [f], next_states_by_0, next_states_by_1)
+        dfa = DFA(nstates, [f], transition_matrix)
+        print(transition_matrix)
         reg = dfa.to_regex()
         if reg != '':
             regex += '+' + reg
 
-    dfa = DFA(nstates, final_states, next_states_by_0, next_states_by_1)
-    dfa.draw_graph(regex[1:], 'DFA')
+    dfa = DFA(nstates, final_states, transition_matrix)
+    dfa.draw_graph(regex[1:], 'NFA')
 
-    #print(regex[1:])
+    print(regex[1:])
 
 
 if __name__ == '__main__':
