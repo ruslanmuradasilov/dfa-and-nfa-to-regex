@@ -1,6 +1,8 @@
 from graphviz import Digraph
 import numpy as np
 import re
+
+
 # https://qastack.ru/cs/2016/how-to-convert-finite-automata-to-regular-expressions - to_regex
 # https://graphviz.readthedocs.io/en/stable/index.html# - draw_graph
 
@@ -108,14 +110,18 @@ class DFA:
         final_loop = self.get_loop(self.final_states[0], trans_func)
         final_to_init = trans_func[self.final_states[0]][self.init_state]
         if self.final_states[0] == self.init_state:
-            return init_loop + '$'
+            if init_loop == '':
+                return '$'
+            return init_loop
         regex = ''
         if len(init_to_final) > 0:
             regex = self.concat([init_loop, init_to_final, final_loop])
         else:
             return ''
         if len(final_to_init) > 0:
-            regex = self.union([regex, self.concat([self.iterate(self.concat([init_loop, init_to_final, final_loop, final_to_init])), init_to_final, final_loop ])])
+            regex = self.union([regex, self.concat(
+                [self.iterate(self.concat([init_loop, init_to_final, final_loop, final_to_init, init_loop])),
+                 init_to_final, final_loop])])
         return regex
 
 
@@ -131,13 +137,15 @@ def main():
 
     for line in fin:
         line = line.split()
-        transition_matrix[int(line[0])][int(line[1])] = line[2]
+        if (transition_matrix[int(line[0])][int(line[1])] != ''):
+            transition_matrix[int(line[0])][int(line[1])] += '+' + line[2]
+        else:
+            transition_matrix[int(line[0])][int(line[1])] = line[2]
     fin.close()
 
     regex = ''
     for f in final_states:
         dfa = DFA(nstates, [f], transition_matrix)
-        print(transition_matrix)
         reg = dfa.to_regex()
         if reg != '':
             regex += '+' + reg
@@ -145,7 +153,7 @@ def main():
     dfa = DFA(nstates, final_states, transition_matrix)
     dfa.draw_graph(regex[1:], 'NFA')
 
-    print(regex[1:])
+    # print(regex[1:])
 
 
 if __name__ == '__main__':

@@ -1,6 +1,8 @@
 from graphviz import Digraph
 import numpy as np
 import re
+
+
 # https://qastack.ru/cs/2016/how-to-convert-finite-automata-to-regular-expressions - to_regex
 # https://graphviz.readthedocs.io/en/stable/index.html# - draw_graph
 
@@ -132,7 +134,9 @@ class DFA:
         else:
             return ''
         if len(final_to_init) > 0:
-            regex = self.union([regex, self.concat([self.iterate(self.concat([init_loop, init_to_final, final_loop, final_to_init])), init_to_final, final_loop ])])
+            regex = self.union([regex, self.concat(
+                [self.iterate(self.concat([init_loop, init_to_final, final_loop, final_to_init])), init_to_final,
+                 final_loop])])
         return regex
 
 
@@ -163,7 +167,7 @@ def main():
     dfa = DFA(nstates, final_states, next_states_by_0, next_states_by_1)
     dfa.draw_graph(regex[1:], 'DFA')
 
-    #print(regex[1:])
+    # print(regex[1:])
 
 
 if __name__ == '__main__':
